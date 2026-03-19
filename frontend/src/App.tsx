@@ -20,6 +20,7 @@ const PackageDetailPage = lazy(() => import('./pages/PackageDetailPage'));
 const CreatePackagePage = lazy(() => import('./pages/CreatePackagePage'));
 const AgentDashboardPage = lazy(() => import('./pages/AgentDashboardPage'));
 const AgentShelvesPage = lazy(() => import('./pages/AgentShelvesPage'));
+const AgentReportsPage = lazy(() => import('./pages/AgentReportsPage'));
 const ReportsPage = lazy(() => import('./pages/ReportsPage'));
 const ShelvesPage = lazy(() => import('./pages/ShelvesPage'));
 const AdminAgentsPage = lazy(() => import('./pages/AdminAgentsPage'));
@@ -91,6 +92,11 @@ export default function App() {
           <Route path="/agent/shelves" element={
             <ProtectedRoute roles={['agent']}>
               <Layout><AgentShelvesPage /></Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/agent/reports" element={
+            <ProtectedRoute roles={['agent']}>
+              <Layout><AgentReportsPage /></Layout>
             </ProtectedRoute>
           } />
 

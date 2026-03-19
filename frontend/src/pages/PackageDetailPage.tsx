@@ -14,6 +14,14 @@ const allSteps = [
   { key: 'delivered', label: 'Delivered', icon: '✅' },
 ];
 
+const doorstepSteps = [
+  { key: 'created', label: 'Package Created', icon: '📦' },
+  { key: 'dropped_off_at_agent', label: 'Dropped Off at Agent', icon: '🏪' },
+  { key: 'dispatched', label: 'Dispatched', icon: '🚚' },
+  { key: 'out_for_delivery', label: 'Out for Delivery', icon: '🛵' },
+  { key: 'delivered', label: 'Delivered', icon: '✅' },
+];
+
 const shelfSteps = [
   { key: 'created', label: 'Package Created', icon: '📦' },
   { key: 'dropped_off_at_agent', label: 'Dropped Off at Agent', icon: '🏪' },
@@ -57,7 +65,11 @@ export default function PackageDetailPage() {
     </div>
   );
 
-  const steps = pkg.deliveryMethod === 'rent_a_shelf' ? shelfSteps : allSteps;
+  const steps = pkg.deliveryMethod === 'rent_a_shelf'
+    ? shelfSteps
+    : pkg.deliveryMethod === 'doorstep_delivery'
+    ? doorstepSteps
+    : allSteps;
   const currentStep = steps.findIndex(s => s.key === pkg.status);
 
   return (

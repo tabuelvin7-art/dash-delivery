@@ -38,6 +38,19 @@ export default function NotificationBell() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  const markAllRead = async (notifs: Notification[]) => {
+    const unreadIds = notifs.filter(n => !n.channels?.inApp?.readAt).map(n => n._id);
+    if (unreadIds.length === 0) return;
+    try {
+      await Promise.all(unreadIds.map(id => api.patch(`/notifications/${id}/read`)));
+      setUnread(0);
+      setNotifications(prev => prev.map(n => ({
+        ...n,
+        channels: { ...n.channels, inApp: { ...n.channels.inApp, readAt: new Date().toISOString() } },
+      })));
+    } catch { /* ignore */ }
+  };
+
   const markRead = async (id: string) => {
     try {
       await api.patch(`/notifications/${id}/read`);
@@ -48,7 +61,11 @@ export default function NotificationBell() {
   return (
     <div className="relative" ref={ref}>
       <button
-        onClick={() => setOpen(!open)}
+        onClick={() => {
+          const next = !open;
+          setOpen(next);
+          if (next && unread > 0) markAllRead(notifications);
+        }}
         className="relative p-1.5 rounded-full hover:bg-green-800 transition-colors"
         aria-label="Notifications"
       >

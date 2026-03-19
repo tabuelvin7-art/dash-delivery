@@ -130,7 +130,7 @@ router.patch('/:id/status', requireRole('agent'), [
     if (pkg.status === 'dropped_off_at_agent' && pkg.deliveryMethod === 'rent_a_shelf') {
       notificationService.notifyReleaseCode(pkg.packageId).catch(() => {});
     }
-    if (pkg.status === 'arrived_at_destination_agent') {
+    if (pkg.status === 'arrived_at_destination_agent' && pkg.deliveryMethod === 'agent_delivery') {
       notificationService.notifyReleaseCode(pkg.packageId).catch(() => {});
       paymentService.sendItemPricePrompt(pkg.packageId).catch(() => {});
     }

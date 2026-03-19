@@ -56,7 +56,7 @@ export interface PaginatedResult<T> {
 
 const PAGE_LIMIT = 50;
 
-/** Valid status transitions: key → allowed next statuses */
+/** Valid status transitions per delivery method */
 const VALID_TRANSITIONS: Record<string, string[]> = {
   created: ['dropped_off_at_agent', 'cancelled'],
   dropped_off_at_agent: ['dispatched'],
@@ -66,6 +66,27 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
   delivered: [],
   returned: [],
   cancelled: [],
+};
+
+/** Delivery-method-specific allowed transitions (overrides VALID_TRANSITIONS where set) */
+const METHOD_TRANSITIONS: Record<DeliveryMethod, Record<string, string[]>> = {
+  rent_a_shelf: {
+    created: ['dropped_off_at_agent', 'cancelled'],
+    dropped_off_at_agent: [], // delivered only via release code validation
+    delivered: [],
+    returned: [],
+    cancelled: [],
+  },
+  doorstep_delivery: {
+    created: ['dropped_off_at_agent', 'cancelled'],
+    dropped_off_at_agent: ['dispatched'],
+    dispatched: ['out_for_delivery', 'returned'],   // skips arrived_at_destination_agent
+    out_for_delivery: ['delivered', 'returned'],
+    delivered: [],
+    returned: [],
+    cancelled: [],
+  },
+  agent_delivery: VALID_TRANSITIONS,
 };
 
 // ---------------------------------------------------------------------------
@@ -385,10 +406,11 @@ export async function updatePackageStatus(
   }
 
   // Validate status transition
-  const allowedNext = VALID_TRANSITIONS[pkg.status];
+  const transitions = METHOD_TRANSITIONS[pkg.deliveryMethod] ?? VALID_TRANSITIONS;
+  const allowedNext = transitions[pkg.status] ?? [];
   if (!allowedNext.includes(newStatus)) {
     throw makeError(
-      `Invalid status transition from '${pkg.status}' to '${newStatus}'`,
+      `Invalid status transition from '${pkg.status}' to '${newStatus}' for delivery method '${pkg.deliveryMethod}'`,
       'CONFLICT'
     );
   }
@@ -425,10 +447,11 @@ export async function updatePackageStatus(
 
   // Generate release code:
   // - rent_a_shelf: on dropped_off_at_agent (goods are on shelf, customer can now collect)
-  // - agent_delivery: on arrived_at_destination_agent (standard flow)
+  // - agent_delivery: on arrived_at_destination_agent (customer collects from agent)
+  // - doorstep_delivery: never (agent delivers to address, no code needed)
   if (
     (pkg.deliveryMethod === 'rent_a_shelf' && newStatus === 'dropped_off_at_agent') ||
-    (pkg.deliveryMethod !== 'rent_a_shelf' && newStatus === 'arrived_at_destination_agent')
+    (pkg.deliveryMethod === 'agent_delivery' && newStatus === 'arrived_at_destination_agent')
   ) {
     pkg.releaseCode = generateSixDigitCode();
     pkg.releaseCodeGeneratedAt = new Date();

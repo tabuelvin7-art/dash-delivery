@@ -51,6 +51,19 @@ router.get('/export/:type', requireRole('business_owner', 'admin'), async (req: 
   }
 });
 
+// GET /api/reports/agent — agent-specific stats
+router.get('/agent', requireRole('agent'), async (req: Request, res: Response) => {
+  try {
+    const { startDate, endDate } = req.query as any;
+    const sd = startDate ? new Date(startDate) : undefined;
+    const ed = endDate ? new Date(endDate) : undefined;
+    const stats = await reportingService.getAgentStats(req.user!.sub, sd, ed);
+    res.json({ success: true, data: stats });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: { code: 'ERROR', message: err.message } });
+  }
+});
+
 // GET /api/reports/coverage-areas
 router.get('/coverage-areas', async (_req: Request, res: Response) => {
   try {

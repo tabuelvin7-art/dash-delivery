@@ -41,7 +41,7 @@ export default function CreatePackagePage() {
       }
       const payload: any = { customerId, deliveryMethod: data.deliveryMethod, itemPrice: Number(data.itemPrice), deliveryFee: Number(data.deliveryFee) };
       if (data.deliveryMethod === 'agent_delivery') payload.destinationAgentId = data.destinationAgentId;
-      if (data.deliveryMethod === 'doorstep_delivery') payload.deliveryAddress = data.deliveryAddress;
+      if (data.deliveryMethod === 'doorstep_delivery') { payload.deliveryAddress = data.deliveryAddress; payload.destinationAgentId = data.destinationAgentId; }
       if (data.deliveryMethod === 'rent_a_shelf') payload.shelfRentalId = data.shelfRentalId;
       const res = await api.post('/packages', payload);
       navigate(`/packages/${res.data.data.packageId}`);
@@ -138,9 +138,19 @@ export default function CreatePackagePage() {
                   </div>
                 )}
                 {deliveryMethod === 'doorstep_delivery' && (
-                  <div className="mt-4">
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Delivery Address</label>
-                    <input {...register('deliveryAddress', { required: deliveryMethod === 'doorstep_delivery' })} className={inp} placeholder="Street, Estate, Nairobi" />
+                  <div className="mt-4 space-y-3">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">Delivery Address</label>
+                      <input {...register('deliveryAddress', { required: deliveryMethod === 'doorstep_delivery' })} className={inp} placeholder="Street, Estate, Nairobi" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">Delivering Agent</label>
+                      <select {...register('destinationAgentId', { required: deliveryMethod === 'doorstep_delivery' })} className={inp}>
+                        <option value="">Choose agent location...</option>
+                        {agents.map((a: any) => <option key={a.agentId} value={a._id}>{a.locationName} — {a.neighborhood}</option>)}
+                      </select>
+                      <p className="text-xs text-gray-400 mt-1">The agent who will pick up and deliver to the address.</p>
+                    </div>
                   </div>
                 )}
                 {deliveryMethod === 'rent_a_shelf' && (
@@ -171,6 +181,7 @@ export default function CreatePackagePage() {
                 <button type="button" onClick={() => {
                   if (deliveryMethod === 'agent_delivery' && !watch('destinationAgentId')) { setError('Please select an agent location.'); return; }
                   if (deliveryMethod === 'doorstep_delivery' && !watch('deliveryAddress')?.trim()) { setError('Please enter a delivery address.'); return; }
+                  if (deliveryMethod === 'doorstep_delivery' && !watch('destinationAgentId')) { setError('Please select a delivering agent.'); return; }
                   if (deliveryMethod === 'rent_a_shelf' && !watch('shelfRentalId')) { setError('Please select a shelf rental.'); return; }
                   setError(''); setStep(3);
                 }} className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors">

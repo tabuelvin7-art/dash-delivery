@@ -2,7 +2,7 @@ import mongoose, { Schema, Document, Types } from 'mongoose';
 
 export interface IPayment extends Document {
   transactionId: string;
-  packageId: Types.ObjectId;
+  packageId: Types.ObjectId | null;
   paymentType: 'delivery_fee' | 'item_price' | 'shelf_rental';
   amount: number;
   payerId: Types.ObjectId;
@@ -31,7 +31,7 @@ const PaymentSchema = new Schema<IPayment>(
     packageId: {
       type: Schema.Types.ObjectId,
       ref: 'Package',
-      required: [true, 'Package reference is required'],
+      required: false,
     },
     paymentType: {
       type: String,
@@ -83,7 +83,6 @@ const PaymentSchema = new Schema<IPayment>(
 );
 
 // Indexes
-PaymentSchema.index({ transactionId: 1 }, { unique: true });
 PaymentSchema.index({ packageId: 1 });
 PaymentSchema.index({ payerId: 1, createdAt: -1 });
 PaymentSchema.index({ status: 1 });

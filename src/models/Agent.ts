@@ -107,7 +107,6 @@ const AgentSchema = new Schema<IAgent>(
 );
 
 // Indexes
-AgentSchema.index({ agentId: 1 }, { unique: true });
 AgentSchema.index({ city: 1, neighborhood: 1, isActive: 1 });
 // GeoJSON 2dsphere index — stored as { type: 'Point', coordinates: [lng, lat] }
 AgentSchema.index({ 'coordinates.longitude': 1, 'coordinates.latitude': 1 });

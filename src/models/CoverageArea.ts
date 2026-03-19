@@ -54,7 +54,6 @@ const CoverageAreaSchema = new Schema<ICoverageArea>(
 );
 
 // Indexes
-CoverageAreaSchema.index({ areaId: 1 }, { unique: true });
 CoverageAreaSchema.index({ boundaries: '2dsphere' });
 
 // Pre-save hook: auto-generate areaId in format AREA-YYYYMMDD-XXXXX

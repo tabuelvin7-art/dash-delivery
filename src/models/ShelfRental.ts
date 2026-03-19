@@ -99,7 +99,6 @@ const ShelfRentalSchema = new Schema<IShelfRental>(
 );
 
 // Indexes
-ShelfRentalSchema.index({ rentalId: 1 }, { unique: true });
 ShelfRentalSchema.index({ businessOwnerId: 1, status: 1 });
 ShelfRentalSchema.index({ agentId: 1, status: 1 });
 

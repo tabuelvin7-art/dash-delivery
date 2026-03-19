@@ -131,7 +131,6 @@ const PackageSchema = new Schema<IPackage>(
 );
 
 // Indexes
-PackageSchema.index({ packageId: 1 }, { unique: true });
 PackageSchema.index({ businessOwnerId: 1, createdAt: -1 });
 PackageSchema.index({ customerId: 1, createdAt: -1 });
 PackageSchema.index({ status: 1 });

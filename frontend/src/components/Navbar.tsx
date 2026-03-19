@@ -25,6 +25,7 @@ export default function Navbar() {
       { label: 'Dashboard', href: '/agent', icon: '▦' },
       { label: 'Packages', href: '/packages', icon: '📦' },
       { label: 'Shelves', href: '/agent/shelves', icon: '🗄️' },
+      { label: 'Reports', href: '/agent/reports', icon: '📊' },
     ],
     admin: [
       { label: 'Dashboard', href: '/dashboard', icon: '▦' },
@@ -55,7 +56,7 @@ export default function Navbar() {
           {/* Desktop nav */}
           <div className="hidden md:flex items-center gap-1">
             {navLinks.map(l => {
-              const active = location.pathname === l.href || location.pathname.startsWith(l.href + '/');
+              const active = location.pathname === l.href || (l.href !== '/agent' && location.pathname.startsWith(l.href + '/'));
               return (
                 <Link
                   key={l.href}

@@ -150,7 +150,7 @@ export async function sendShelfRentalPrompt(rentalId: string): Promise<IPayment>
   if (!agent) throw makeError('Agent not found', 'NOT_FOUND');
 
   const payment = await Payment.create({
-    packageId: rental._id,
+    packageId: null,  // shelf rental payments are not tied to a package
     paymentType: 'shelf_rental',
     amount: rental.pricing.totalAmount,
     payerId: rental.businessOwnerId,

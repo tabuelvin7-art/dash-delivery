@@ -177,6 +177,95 @@ export async function getDashboardStats(businessOwnerId: string): Promise<Dashbo
 }
 
 // ---------------------------------------------------------------------------
+// Agent reporting
+// ---------------------------------------------------------------------------
+
+export interface AgentStats {
+  totalPackages: number;
+  activePackages: number;
+  deliveredPackages: number;
+  returnedPackages: number;
+  deliverySuccessRate: number;
+  byStatus: Record<string, number>;
+  shelfRentals: {
+    total: number;
+    active: number;
+    totalBilled: number;
+    totalPaid: number;
+  };
+  byMonth: Array<{ month: string; received: number; delivered: number }>;
+}
+
+export async function getAgentStats(
+  userId: string,
+  startDate?: Date,
+  endDate?: Date
+): Promise<AgentStats> {
+  const { Agent } = await import('../models/Agent');
+  const agentDoc = await Agent.findOne({ userId: new Types.ObjectId(userId) }).select('_id agentId');
+  if (!agentDoc) {
+    return {
+      totalPackages: 0, activePackages: 0, deliveredPackages: 0,
+      returnedPackages: 0, deliverySuccessRate: 0, byStatus: {},
+      shelfRentals: { total: 0, active: 0, totalBilled: 0, totalPaid: 0 },
+      byMonth: [],
+    };
+  }
+
+  const agentObjId = agentDoc._id as Types.ObjectId;
+  const dateFilter: Record<string, unknown> = {};
+  if (startDate || endDate) {
+    const dq: Record<string, unknown> = {};
+    if (startDate) dq['$gte'] = startDate;
+    if (endDate) dq['$lte'] = endDate;
+    dateFilter['createdAt'] = dq;
+  }
+
+  const pkgQuery = {
+    $or: [{ pickupAgentId: agentObjId }, { destinationAgentId: agentObjId }],
+    ...dateFilter,
+  };
+
+  const packages = await Package.find(pkgQuery).select('status createdAt deliveredAt trackingHistory');
+
+  const totalPackages = packages.length;
+  const deliveredPackages = packages.filter(p => p.status === 'delivered').length;
+  const returnedPackages = packages.filter(p => p.status === 'returned').length;
+  const cancelledPackages = packages.filter(p => p.status === 'cancelled').length;
+  const activePackages = totalPackages - deliveredPackages - returnedPackages - cancelledPackages;
+  const deliverySuccessRate = (totalPackages - cancelledPackages - returnedPackages) > 0
+    ? (deliveredPackages / (totalPackages - cancelledPackages - returnedPackages)) * 100
+    : 0;
+
+  const byStatus: Record<string, number> = {};
+  const monthMap: Record<string, { received: number; delivered: number }> = {};
+  for (const p of packages) {
+    byStatus[p.status] = (byStatus[p.status] || 0) + 1;
+    const month = p.createdAt.toISOString().slice(0, 7);
+    if (!monthMap[month]) monthMap[month] = { received: 0, delivered: 0 };
+    monthMap[month].received += 1;
+    if (p.status === 'delivered') monthMap[month].delivered += 1;
+  }
+
+  const byMonth = Object.entries(monthMap)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([month, v]) => ({
+      month: new Date(month + '-01').toLocaleDateString('en-US', { year: 'numeric', month: 'short' }),
+      ...v,
+    }));
+
+  const rentals = await ShelfRental.find({ agentId: agentObjId, ...dateFilter }).select('status pricing paymentStatus');
+  const shelfRentals = {
+    total: rentals.length,
+    active: rentals.filter(r => r.status === 'active').length,
+    totalBilled: rentals.reduce((s, r) => s + (r.pricing?.totalAmount || 0), 0),
+    totalPaid: rentals.filter(r => r.paymentStatus === 'paid').reduce((s, r) => s + (r.pricing?.totalAmount || 0), 0),
+  };
+
+  return { totalPackages, activePackages, deliveredPackages, returnedPackages, deliverySuccessRate, byStatus, shelfRentals, byMonth };
+}
+
+// ---------------------------------------------------------------------------
 // CSV export
 // ---------------------------------------------------------------------------
 

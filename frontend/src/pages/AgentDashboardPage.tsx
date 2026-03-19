@@ -12,7 +12,15 @@ const STATUS_ACTIONS: Record<string, { label: string; next: string; color: strin
   out_for_delivery:             { label: 'Mark Delivered',      next: 'delivered',                    color: 'bg-green-100 text-green-700 hover:bg-green-200' },
 };
 
-// Statuses that can be returned to sender
+// doorstep skips arrived_at_destination_agent — dispatched goes straight to out_for_delivery
+const DOORSTEP_ACTIONS: Record<string, { label: string; next: string; color: string }> = {
+  created:             { label: 'Confirm Drop-off', next: 'dropped_off_at_agent', color: 'bg-amber-100 text-amber-700 hover:bg-amber-200' },
+  dropped_off_at_agent:{ label: 'Dispatch',         next: 'dispatched',           color: 'bg-blue-100 text-blue-700 hover:bg-blue-200' },
+  dispatched:          { label: 'Out for Delivery', next: 'out_for_delivery',     color: 'bg-orange-100 text-orange-700 hover:bg-orange-200' },
+  out_for_delivery:    { label: 'Mark Delivered',   next: 'delivered',            color: 'bg-green-100 text-green-700 hover:bg-green-200' },
+};
+
+// Statuses that can be returned to sender (not applicable to rent_a_shelf)
 const RETURNABLE = ['dispatched', 'arrived_at_destination_agent', 'out_for_delivery'];export default function AgentDashboardPage() {
   const [packages, setPackages] = useState<any[]>([]);
   const [agentInfo, setAgentInfo] = useState<any>(null);
@@ -237,6 +245,8 @@ const RETURNABLE = ['dispatched', 'arrived_at_destination_agent', 'out_for_deliv
                   let action: { label: string; next: string; color: string } | null = null;
                   if (isShelf) {
                     if (pkg.status === 'created') action = { label: 'Confirm Arrival', next: 'dropped_off_at_agent', color: 'bg-amber-100 text-amber-700 hover:bg-amber-200' };
+                  } else if (pkg.deliveryMethod === 'doorstep_delivery') {
+                    action = DOORSTEP_ACTIONS[pkg.status] || null;
                   } else {
                     action = STATUS_ACTIONS[pkg.status] || null;
                   }
@@ -277,7 +287,7 @@ const RETURNABLE = ['dispatched', 'arrived_at_destination_agent', 'out_for_deliv
                               {action.label}
                             </button>
                           )}
-                          {RETURNABLE.includes(pkg.status) && (
+                          {RETURNABLE.includes(pkg.status) && !isShelf && (
                             <button
                               onClick={() => returnToSender(pkg.packageId)}
                               className="text-xs px-3 py-1.5 rounded-lg font-medium bg-red-50 text-red-600 hover:bg-red-100 transition-colors"

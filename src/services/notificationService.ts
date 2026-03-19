@@ -242,7 +242,7 @@ export async function notifyCustomerPackageCreated(packageId: string): Promise<v
   const method = pkg.deliveryMethod === 'rent_a_shelf'
     ? 'available for pickup at an agent location'
     : pkg.deliveryMethod === 'doorstep_delivery'
-    ? 'on its way to your address'
+    ? 'being prepared for doorstep delivery to your address'
     : 'ready for pickup at an agent location';
 
   const msg = `A package (${packageId}) has been created for you and is ${method}. Track it in the app.`;
