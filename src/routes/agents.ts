@@ -131,21 +131,11 @@ router.patch('/:id', requireRole('admin'), async (req: Request, res: Response) =
 // PATCH /api/agents/:id/deactivate - admin only
 router.patch('/:id/deactivate', requireRole('admin'), async (req: Request, res: Response) => {
   try {
-    // :id may be either the agentId string (AGT-...) or a MongoDB _id
-    const { Agent } = await import('../models/Agent');
-    const mongoose = await import('mongoose');
-    let agent;
-    if (mongoose.default.isValidObjectId(req.params.id)) {
-      agent = await Agent.findById(req.params.id);
-    } else {
-      agent = await Agent.findOne({ agentId: req.params.id });
-    }
-    if (!agent) { res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Agent not found' } }); return; }
-    agent.isActive = false;
-    await agent.save();
+    await agentService.deactivateAgent(req.params.id);
     res.json({ success: true, message: 'Agent deactivated' });
   } catch (err: any) {
-    res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: err.message } });
+    const status = err.code === 'NOT_FOUND' ? 404 : 500;
+    res.status(status).json({ success: false, error: { code: err.code || 'ERROR', message: err.message } });
   }
 });
 

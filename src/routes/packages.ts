@@ -147,41 +147,25 @@ router.patch('/:id/status', requireRole('agent'), [
 // PATCH /api/packages/:id/cancel — business owner cancels a created package
 router.patch('/:id/cancel', requireRole('business_owner'), async (req: Request, res: Response) => {
   try {
-    const { Package } = await import('../models/Package');
-    const { Types } = await import('mongoose');
-    const pkg = await Package.findOne({ packageId: req.params.id });
-    if (!pkg) { res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Package not found' } }); return; }
-    if (!pkg.businessOwnerId.equals(new Types.ObjectId(req.user!.sub))) {
-      res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Access denied' } }); return;
-    }
-    if (pkg.status !== 'created') {
-      res.status(409).json({ success: false, error: { code: 'CONFLICT', message: 'Only packages with status "created" can be cancelled' } }); return;
-    }
-    pkg.status = 'cancelled';
-    pkg.trackingHistory.push({ status: 'cancelled' as any, timestamp: new Date(), updatedBy: new Types.ObjectId(req.user!.sub), location: 'Cancelled by business owner' });
-    await pkg.save();
+    const pkg = await packageService.cancelPackage(req.params.id, req.user!.sub);
+    notificationService.notifyPackageCancelled(pkg.packageId).catch(() => {});
     res.json({ success: true, data: pkg });
   } catch (err: any) {
-    res.status(500).json({ success: false, error: { code: 'ERROR', message: err.message } });
+    const status = err.code === 'NOT_FOUND' ? 404 : err.code === 'FORBIDDEN' ? 403 : err.code === 'CONFLICT' ? 409 : 400;
+    res.status(status).json({ success: false, error: { code: err.code || 'ERROR', message: err.message } });
   }
 });
 
 // PATCH /api/packages/:id/admin-status — admin overrides any package status
 router.patch('/:id/admin-status', requireRole('admin'), async (req: Request, res: Response) => {
   try {
-    const { Package } = await import('../models/Package');
-    const { Types } = await import('mongoose');
     const { status, note } = req.body;
     if (!status) { res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'status is required' } }); return; }
-    const pkg = await Package.findOne({ packageId: req.params.id });
-    if (!pkg) { res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Package not found' } }); return; }
-    pkg.status = status;
-    pkg.trackingHistory.push({ status, timestamp: new Date(), updatedBy: new Types.ObjectId(req.user!.sub), location: note || 'Admin override' });
-    if (status === 'delivered') pkg.deliveredAt = new Date();
-    await pkg.save();
+    const pkg = await packageService.adminOverrideStatus(req.params.id, status, req.user!.sub, note);
     res.json({ success: true, data: pkg });
   } catch (err: any) {
-    res.status(500).json({ success: false, error: { code: 'ERROR', message: err.message } });
+    const status = err.code === 'NOT_FOUND' ? 404 : 500;
+    res.status(status).json({ success: false, error: { code: err.code || 'ERROR', message: err.message } });
   }
 });
 

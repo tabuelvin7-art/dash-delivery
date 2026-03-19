@@ -1,20 +1,12 @@
 import { Router, Request, Response } from 'express';
-import { body, validationResult } from 'express-validator';
+import { body } from 'express-validator';
 import * as authService from '../services/authService';
 import { verifyToken } from '../middleware/auth';
 import { sanitizeInputs } from '../middleware/sanitize';
 import { auditLog } from '../middleware/auditLog';
+import { handleValidation } from '../utils/routeHelpers';
 
 const router = Router();
-
-const handleValidation = (req: Request, res: Response): boolean => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Invalid input', details: errors.array().map(e => ({ field: (e as any).path, message: e.msg })) } });
-    return false;
-  }
-  return true;
-};
 
 // POST /api/auth/register
 router.post('/register', sanitizeInputs, [

@@ -408,8 +408,46 @@ export async function notifyPaymentReceived(paymentId: string): Promise<void> {
 }
 
 /**
- * Notify business owner via SMS when a package is returned to sender.
+ * Notify customer and assigned agent when a package is cancelled by the business owner.
  */
+export async function notifyPackageCancelled(packageId: string): Promise<void> {
+  const pkg = await Package.findOne({ packageId });
+  if (!pkg) return;
+
+  const msg = `Package ${packageId} has been cancelled by the business owner.`;
+
+  const notifications: Promise<any>[] = [
+    createNotification(
+      String(pkg.customerId),
+      'package_status',
+      'Package Cancelled',
+      msg,
+      { sendSms: true, relatedEntityType: 'package', relatedEntityId: String(pkg._id) }
+    ),
+  ];
+
+  // Notify the assigned agent(s) if any
+  const { Agent } = await import('../models/Agent');
+  const agentObjectIds = [pkg.pickupAgentId, pkg.destinationAgentId].filter(Boolean);
+  if (agentObjectIds.length > 0) {
+    const agents = await Agent.find({ _id: { $in: agentObjectIds } }).select('userId');
+    agents.forEach(agent =>
+      notifications.push(
+        createNotification(
+          String(agent.userId),
+          'package_status',
+          'Package Cancelled',
+          msg,
+          { sendSms: false, relatedEntityType: 'package', relatedEntityId: String(pkg._id) }
+        )
+      )
+    );
+  }
+
+  await Promise.all(notifications);
+}
+
+
 export async function notifyPackageReturned(packageId: string): Promise<void> {
   const pkg = await Package.findOne({ packageId });
   if (!pkg) return;

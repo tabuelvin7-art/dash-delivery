@@ -465,6 +465,27 @@ export async function updatePackageStatus(
   return pkg;
 }
 
+export async function cancelPackage(packageId: string, userId: string): Promise<IPackage> {
+  const pkg = await Package.findOne({ packageId });
+  if (!pkg) throw makeError(`Package ${packageId} not found`, 'NOT_FOUND');
+  if (!pkg.businessOwnerId.equals(new Types.ObjectId(userId))) throw makeError('Access denied', 'FORBIDDEN');
+  if (pkg.status !== 'created') throw makeError('Only packages with status "created" can be cancelled', 'CONFLICT');
+  pkg.status = 'cancelled';
+  pkg.trackingHistory.push({ status: 'cancelled' as any, timestamp: new Date(), updatedBy: new Types.ObjectId(userId), location: 'Cancelled by business owner' });
+  await pkg.save();
+  return pkg;
+}
+
+export async function adminOverrideStatus(packageId: string, status: string, adminId: string, note?: string): Promise<IPackage> {
+  const pkg = await Package.findOne({ packageId });
+  if (!pkg) throw makeError(`Package ${packageId} not found`, 'NOT_FOUND');
+  pkg.status = status as PackageStatus;
+  pkg.trackingHistory.push({ status: status as any, timestamp: new Date(), updatedBy: new Types.ObjectId(adminId), location: note || 'Admin override' });
+  if (status === 'delivered') pkg.deliveredAt = new Date();
+  await pkg.save();
+  return pkg;
+}
+
 // ---------------------------------------------------------------------------
 // Task 4.7 – Release code generation and validation
 // ---------------------------------------------------------------------------

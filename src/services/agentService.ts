@@ -191,7 +191,9 @@ export async function updateAgent(agentId: string, data: UpdateAgentInput): Prom
  * Requirements: 11.3
  */
 export async function deactivateAgent(agentId: string): Promise<IAgent> {
-  const agent = await Agent.findOne({ agentId });
+  const agent = Types.ObjectId.isValid(agentId)
+    ? await Agent.findById(agentId)
+    : await Agent.findOne({ agentId });
   if (!agent) {
     throw makeError(`Agent ${agentId} not found`, 'NOT_FOUND');
   }
