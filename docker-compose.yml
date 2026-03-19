@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7
+    container_name: nairobi-delivery-db
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: nairobi-delivery
+    volumes:
+      - mongo_data:/data/db
+    ports:
+      - "27017:27017"
+    networks:
+      - app-network
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nairobi-delivery-backend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017/nairobi-delivery
+      - NODE_ENV=production
+    ports:
+      - "5000:5000"
+    depends_on:
+      - mongodb
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - app-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: nairobi-delivery-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+volumes:
+  mongo_data:
+
+networks:
+  app-network:
+    driver: bridge
