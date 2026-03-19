@@ -80,8 +80,8 @@ router.post('/verify-phone', sanitizeInputs, [
   }
 });
 
-// POST /api/auth/logout
-router.post('/logout', verifyToken, (req: Request, res: Response) => {
+// POST /api/auth/logout — no auth required; token may already be expired
+router.post('/logout', (req: Request, res: Response) => {
   const token = req.headers['authorization']?.split(' ')[1];
   if (token) authService.logout(token);
   res.json({ success: true, message: 'Logged out successfully' });
