@@ -52,6 +52,7 @@ export interface AgentFilters {
   city?: string;
   neighborhood?: string;
   page?: number;
+  includeInactive?: boolean;
 }
 
 export interface PaginatedResult<T> {
@@ -109,10 +110,11 @@ export async function createAgent(data: CreateAgentInput): Promise<IAgent> {
  * Requirements: 11.4, 11.5
  */
 export async function getAgents(filters: AgentFilters = {}): Promise<PaginatedResult<IAgent>> {
-  const { city, neighborhood, page = 1 } = filters;
+  const { city, neighborhood, page = 1, includeInactive = false } = filters;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const query: Record<string, any> = { isActive: true };
+  const query: Record<string, any> = {};
+  if (!includeInactive) query['isActive'] = true;
 
   if (city) query['city'] = new RegExp(`^${city}$`, 'i');
   if (neighborhood) query['neighborhood'] = new RegExp(`^${neighborhood}$`, 'i');
@@ -152,7 +154,9 @@ export async function getAgentById(agentId: string): Promise<IAgent> {
  * Requirements: 11.3
  */
 export async function updateAgent(agentId: string, data: UpdateAgentInput): Promise<IAgent> {
-  const agent = await Agent.findOne({ agentId });
+  const agent = Types.ObjectId.isValid(agentId)
+    ? await Agent.findById(agentId)
+    : await Agent.findOne({ agentId });
   if (!agent) {
     throw makeError(`Agent ${agentId} not found`, 'NOT_FOUND');
   }

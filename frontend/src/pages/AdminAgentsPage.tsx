@@ -12,6 +12,12 @@ interface AgentForm {
   agentFirstName: string; agentLastName: string; agentEmail: string; agentPassword: string; agentPhone: string;
 }
 
+interface EditForm {
+  locationName: string; address: string; neighborhood: string; city: string;
+  contactPhone: string; totalShelves: number; availableShelves: number;
+  openTime: string; closeTime: string;
+}
+
 const inp = "w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all";
 
 function Field({ label, children, error }: { label: string; children: React.ReactNode; error?: string }) {
@@ -28,12 +34,15 @@ export default function AdminAgentsPage() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
   const { register, handleSubmit, reset, formState: { isSubmitting, errors } } = useForm<AgentForm>({
     defaultValues: { city: 'Nairobi', totalShelves: 10, openTime: '08:00', closeTime: '20:00' },
   });
+
+  const editForm = useForm<EditForm>();
 
   const load = () => {
     api.get('/agents').then(r => setAgents(r.data.data || [])).catch(() => {}).finally(() => setLoading(false));
@@ -63,6 +72,43 @@ export default function AdminAgentsPage() {
     }
   };
 
+  const openEdit = (agent: Agent) => {
+    setEditingAgent(agent);
+    editForm.reset({
+      locationName: agent.locationName,
+      address: agent.address,
+      neighborhood: agent.neighborhood,
+      city: agent.city,
+      contactPhone: agent.contactPhone,
+      totalShelves: agent.capacity?.totalShelves,
+      availableShelves: agent.capacity?.availableShelves,
+      openTime: agent.operatingHours?.open,
+      closeTime: agent.operatingHours?.close,
+    });
+    setMessage(''); setError('');
+  };
+
+  const onEdit = async (data: EditForm) => {
+    if (!editingAgent) return;
+    setError('');
+    try {
+      await api.patch(`/agents/${editingAgent._id}`, {
+        locationName: data.locationName,
+        address: data.address,
+        neighborhood: data.neighborhood,
+        city: data.city,
+        contactPhone: data.contactPhone,
+        capacity: { totalShelves: Number(data.totalShelves), availableShelves: Number(data.availableShelves) },
+        operatingHours: { open: data.openTime, close: data.closeTime, daysOfWeek: editingAgent.operatingHours?.daysOfWeek },
+      });
+      setMessage('Agent updated successfully.');
+      setEditingAgent(null);
+      load();
+    } catch (e: any) {
+      setError(e.response?.data?.error?.message || 'Failed to update agent');
+    }
+  };
+
   const deactivate = async (agentId: string) => {
     if (!confirm('Deactivate this agent?')) return;
     try {
@@ -84,7 +130,7 @@ export default function AdminAgentsPage() {
           <p className="text-sm text-gray-500 mt-0.5">{agents.length} agent location{agents.length !== 1 ? 's' : ''}</p>
         </div>
         <button
-          onClick={() => setShowForm(!showForm)}
+          onClick={() => { setShowForm(!showForm); setEditingAgent(null); }}
           className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors ${showForm ? 'border border-gray-200 text-gray-700 hover:bg-gray-50' : 'bg-green-600 hover:bg-green-700 text-white shadow-sm'}`}
         >
           {showForm ? 'Cancel' : '+ New Agent'}
@@ -94,11 +140,11 @@ export default function AdminAgentsPage() {
       {message && <SuccessAlert message={message} />}
       {error && <ErrorAlert message={error} />}
 
+      {/* Create form */}
       {showForm && (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
           <h2 className="font-semibold text-gray-800 mb-6">Create Agent Location</h2>
           <form onSubmit={handleSubmit(onCreate)} className="space-y-6">
-            {/* Account section */}
             <div>
               <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Agent Login Account</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -116,8 +162,6 @@ export default function AdminAgentsPage() {
                 </Field>
               </div>
             </div>
-
-            {/* Location section */}
             <div className="border-t border-gray-100 pt-6">
               <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Location Details</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -153,13 +197,77 @@ export default function AdminAgentsPage() {
                 </Field>
               </div>
             </div>
-
             <div className="flex justify-end pt-2">
               <button type="submit" disabled={isSubmitting} className="bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-xl text-sm font-semibold shadow-sm transition-colors disabled:opacity-50">
                 {isSubmitting ? 'Creating...' : 'Create Agent'}
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* Edit modal */}
+      {editingAgent && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <h2 className="font-semibold text-gray-800">Edit Agent — {editingAgent.locationName}</h2>
+              <button onClick={() => setEditingAgent(null)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
+            </div>
+            <form onSubmit={editForm.handleSubmit(onEdit)} className="p-6 space-y-6">
+              <div>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Location Details</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Field label="Location Name">
+                    <input {...editForm.register('locationName', { required: true })} className={inp} />
+                  </Field>
+                  <Field label="Address">
+                    <input {...editForm.register('address', { required: true })} className={inp} />
+                  </Field>
+                  <Field label="Neighborhood">
+                    <input {...editForm.register('neighborhood', { required: true })} className={inp} />
+                  </Field>
+                  <Field label="City">
+                    <input {...editForm.register('city')} className={inp} />
+                  </Field>
+                  <Field label="Contact Phone">
+                    <input {...editForm.register('contactPhone', { required: true })} className={inp} />
+                  </Field>
+                </div>
+              </div>
+              <div className="border-t border-gray-100 pt-5">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Shelf Capacity</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <Field label="Total Shelves">
+                    <input type="number" min={0} {...editForm.register('totalShelves', { required: true, min: 0 })} className={inp} />
+                  </Field>
+                  <Field label="Available Shelves">
+                    <input type="number" min={0} {...editForm.register('availableShelves', { required: true, min: 0 })} className={inp} />
+                    <p className="text-xs text-gray-400 mt-1">Cannot exceed total shelves</p>
+                  </Field>
+                </div>
+              </div>
+              <div className="border-t border-gray-100 pt-5">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Operating Hours</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <Field label="Opening Time">
+                    <input type="time" {...editForm.register('openTime')} className={inp} />
+                  </Field>
+                  <Field label="Closing Time">
+                    <input type="time" {...editForm.register('closeTime')} className={inp} />
+                  </Field>
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button type="button" onClick={() => setEditingAgent(null)} className="border border-gray-200 text-gray-700 hover:bg-gray-50 px-5 py-2.5 rounded-xl text-sm font-medium transition-colors">
+                  Cancel
+                </button>
+                <button type="submit" disabled={editForm.formState.isSubmitting} className="bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-xl text-sm font-semibold shadow-sm transition-colors disabled:opacity-50">
+                  {editForm.formState.isSubmitting ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
@@ -199,11 +307,16 @@ export default function AdminAgentsPage() {
                       </span>
                     </td>
                     <td className="px-5 py-3.5">
-                      {agent.isActive && (
-                        <button onClick={() => deactivate(agent._id)} className="text-xs text-red-500 hover:text-red-700 font-medium transition-colors">
-                          Deactivate
+                      <div className="flex items-center gap-3">
+                        <button onClick={() => openEdit(agent)} className="text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors">
+                          Edit
                         </button>
-                      )}
+                        {agent.isActive && (
+                          <button onClick={() => deactivate(agent._id)} className="text-xs text-red-500 hover:text-red-700 font-medium transition-colors">
+                            Deactivate
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

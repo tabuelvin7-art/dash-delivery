@@ -35,7 +35,7 @@ function makeError(message: string, code: string): Error {
  * Calculate total rental amount based on duration and monthly rate.
  * Partial months are rounded up to the nearest full month.
  */
-function calculateTotalAmount(startDate: Date, endDate: Date, monthlyRate: number): number {
+export function calculateTotalAmount(startDate: Date, endDate: Date, monthlyRate: number): number {
   const msPerDay = 1000 * 60 * 60 * 24;
   const days = Math.ceil((endDate.getTime() - startDate.getTime()) / msPerDay);
   const months = Math.ceil(days / 30);

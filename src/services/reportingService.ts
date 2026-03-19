@@ -191,7 +191,6 @@ export interface AgentStats {
     total: number;
     active: number;
     totalBilled: number;
-    totalPaid: number;
   };
   byMonth: Array<{ month: string; received: number; delivered: number }>;
 }
@@ -207,7 +206,7 @@ export async function getAgentStats(
     return {
       totalPackages: 0, activePackages: 0, deliveredPackages: 0,
       returnedPackages: 0, deliverySuccessRate: 0, byStatus: {},
-      shelfRentals: { total: 0, active: 0, totalBilled: 0, totalPaid: 0 },
+      shelfRentals: { total: 0, active: 0, totalBilled: 0 },
       byMonth: [],
     };
   }
@@ -259,7 +258,6 @@ export async function getAgentStats(
     total: rentals.length,
     active: rentals.filter(r => r.status === 'active').length,
     totalBilled: rentals.reduce((s, r) => s + (r.pricing?.totalAmount || 0), 0),
-    totalPaid: rentals.filter(r => r.paymentStatus === 'paid').reduce((s, r) => s + (r.pricing?.totalAmount || 0), 0),
   };
 
   return { totalPackages, activePackages, deliveredPackages, returnedPackages, deliverySuccessRate, byStatus, shelfRentals, byMonth };

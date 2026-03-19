@@ -4,26 +4,71 @@ import Spinner from '../components/Spinner';
 
 export default function AgentShelvesPage() {
   const [data, setData] = useState<any>(null);
+  const [agentInfo, setAgentInfo] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get('/shelves/my-earnings')
-      .then(r => setData(r.data.data))
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    Promise.all([
+      api.get('/shelves/my-earnings'),
+      api.get('/agents/my-profile'),
+    ]).then(([earningsRes, profileRes]) => {
+      setData(earningsRes.data.data);
+      setAgentInfo(profileRes.data.data);
+    }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
   if (loading) return <Spinner />;
 
+  const total = agentInfo?.capacity?.totalShelves ?? 0;
+  const available = agentInfo?.capacity?.availableShelves ?? 0;
+  const occupied = total - available;
+  const occupancyPct = total > 0 ? Math.round((occupied / total) * 100) : 0;
+
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Shelf Rentals</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Business owners renting shelf space at your location</p>
+        <h1 className="text-2xl font-bold text-gray-900">Shelf Management</h1>
+        <p className="text-sm text-gray-500 mt-0.5">Your shelf capacity and active rentals</p>
       </div>
 
+      {/* Capacity card — read-only, admin manages capacity */}
+      {agentInfo && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-gray-800">Shelf Capacity</h2>
+            <span className="text-xs text-gray-400 bg-gray-50 px-2.5 py-1 rounded-full">Managed by admin</span>
+          </div>
+          <div className="grid grid-cols-3 gap-4 mb-4">
+            <div>
+              <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Total</p>
+              <p className="text-3xl font-bold text-gray-900 mt-1">{total}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Available</p>
+              <p className="text-3xl font-bold text-green-600 mt-1">{available}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Occupied</p>
+              <p className="text-3xl font-bold text-orange-500 mt-1">{occupied}</p>
+            </div>
+          </div>
+          <div>
+            <div className="flex justify-between text-xs text-gray-500 mb-1">
+              <span>Occupancy</span>
+              <span>{occupancyPct}%</span>
+            </div>
+            <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${occupancyPct > 80 ? 'bg-red-400' : occupancyPct > 50 ? 'bg-orange-400' : 'bg-green-500'}`}
+                style={{ width: `${occupancyPct}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Summary cards */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 gap-4">
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
           <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Active Rentals</p>
           <p className="text-3xl font-bold text-gray-900 mt-1">{data?.activeRentals ?? 0}</p>
@@ -31,10 +76,6 @@ export default function AgentShelvesPage() {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
           <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Total Billed</p>
           <p className="text-3xl font-bold text-gray-900 mt-1">KES {data?.totalEarned?.toLocaleString() ?? 0}</p>
-        </div>
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Confirmed Paid</p>
-          <p className="text-3xl font-bold text-green-600 mt-1">KES {data?.totalPaid?.toLocaleString() ?? 0}</p>
         </div>
       </div>
 

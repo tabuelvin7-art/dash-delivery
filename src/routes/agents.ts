@@ -26,6 +26,8 @@ router.get('/my-profile', requireRole('agent'), async (req: Request, res: Respon
   }
 });
 
+
+
 // POST /api/agents/validate-code — must be before /:id to avoid param conflict
 router.post('/validate-code', requireRole('agent'), [
   body('packageId').notEmpty(),
@@ -42,11 +44,12 @@ router.post('/validate-code', requireRole('agent'), [
   }
 });
 
-// GET /api/agents — list all active agents
+// GET /api/agents — list all active agents (admin sees inactive too)
 router.get('/', async (req: Request, res: Response) => {
   try {
     const { city, neighborhood, page } = req.query as any;
-    const result = await agentService.getAgents({ city, neighborhood, page: page ? parseInt(page) : 1 });
+    const includeInactive = req.user?.role === 'admin';
+    const result = await agentService.getAgents({ city, neighborhood, page: page ? parseInt(page) : 1, includeInactive });
     res.json({ success: true, ...result });
   } catch (err: any) {
     res.status(500).json({ success: false, error: { code: 'ERROR', message: err.message } });

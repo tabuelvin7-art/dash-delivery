@@ -13,7 +13,6 @@ interface AgentStats {
     total: number;
     active: number;
     totalBilled: number;
-    totalPaid: number;
   };
   byMonth: Array<{ month: string; received: number; delivered: number }>;
 }
@@ -75,7 +74,6 @@ function printAgentReport(stats: AgentStats) {
         <tr><td>Total Rentals</td><td>${stats.shelfRentals.total}</td></tr>
         <tr><td>Active</td><td>${stats.shelfRentals.active}</td></tr>
         <tr><td>Total Billed</td><td>KES ${stats.shelfRentals.totalBilled?.toLocaleString()}</td></tr>
-        <tr><td>Total Paid</td><td>KES ${stats.shelfRentals.totalPaid?.toLocaleString()}</td></tr>
       </tbody></table>
     </div>
   </div>
@@ -155,7 +153,6 @@ export default function AgentReportsPage() {
           <StatCard label="Total Rentals" value={stats.shelfRentals.total} color="blue" />
           <StatCard label="Active" value={stats.shelfRentals.active} color="green" />
           <StatCard label="Total Billed" value={`KES ${stats.shelfRentals.totalBilled?.toLocaleString()}`} color="purple" />
-          <StatCard label="Total Paid" value={`KES ${stats.shelfRentals.totalPaid?.toLocaleString()}`} color="yellow" />
         </div>
       </div>
 

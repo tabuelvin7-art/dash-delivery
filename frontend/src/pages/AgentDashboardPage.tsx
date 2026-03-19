@@ -163,17 +163,10 @@ const RETURNABLE = ['dispatched', 'arrived_at_destination_agent', 'out_for_deliv
             <h2 className="font-semibold text-gray-800">Shelf Rental Earnings</h2>
             <span className="text-xs bg-yellow-100 text-yellow-700 font-medium px-2.5 py-1 rounded-full">{earnings.activeRentals} active</span>
           </div>
-          <div className="grid grid-cols-2 divide-x divide-gray-100">
-            <div className="p-5">
-              <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Total Billed</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">KES {earnings.totalEarned?.toLocaleString()}</p>
-              <p className="text-xs text-gray-400 mt-1">from all rentals</p>
-            </div>
-            <div className="p-5">
-              <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Confirmed Paid</p>
-              <p className="text-2xl font-bold text-green-600 mt-1">KES {earnings.totalPaid?.toLocaleString()}</p>
-              <p className="text-xs text-gray-400 mt-1">completed payments</p>
-            </div>
+          <div className="p-5">
+            <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Total Billed</p>
+            <p className="text-2xl font-bold text-gray-900 mt-1">KES {earnings.totalEarned?.toLocaleString()}</p>
+            <p className="text-xs text-gray-400 mt-1">from all rentals</p>
           </div>
           {earnings.rentals?.length > 0 && (
             <div className="overflow-x-auto border-t border-gray-100">

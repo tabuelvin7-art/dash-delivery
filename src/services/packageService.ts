@@ -487,35 +487,8 @@ export async function adminOverrideStatus(packageId: string, status: string, adm
 }
 
 // ---------------------------------------------------------------------------
-// Task 4.7 – Release code generation and validation
+// Task 4.7 – Release code validation
 // ---------------------------------------------------------------------------
-
-/**
- * Generate a new release code for a package.
- * Called automatically by updatePackageStatus when status becomes
- * 'arrived_at_destination_agent', but exposed here for direct use if needed.
- */
-export async function generateReleaseCode(packageId: string): Promise<IPackage> {
-  const pkg = await Package.findOne({ packageId });
-  if (!pkg) {
-    throw makeError(`Package ${packageId} not found`, 'NOT_FOUND');
-  }
-
-  if (pkg.status !== 'arrived_at_destination_agent') {
-    throw makeError(
-      'Release code can only be generated for packages with status arrived_at_destination_agent',
-      'CONFLICT'
-    );
-  }
-
-  pkg.releaseCode = generateSixDigitCode();
-  pkg.releaseCodeGeneratedAt = new Date();
-  await pkg.save();
-  return pkg;
-}
-
-/**
- * Validate a release code and mark the package as delivered.
  *
  * - Verifies the agent is authorised (destinationAgentId must match)
  * - Checks the code matches

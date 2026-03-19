@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { body } from 'express-validator';
 import * as shelfService from '../services/shelfRentalService';
+import { calculateTotalAmount } from '../services/shelfRentalService';
 import { verifyToken } from '../middleware/auth';
 import { requireRole } from '../middleware/authorize';
 import { sanitizeInputs } from '../middleware/sanitize';
@@ -9,11 +10,7 @@ import { handleValidation } from '../utils/routeHelpers';
 const router = Router();
 router.use(verifyToken, sanitizeInputs);
 
-/** Recalculate total rental amount from start/end dates and monthly rate. */
-function calcTotal(startDate: Date, endDate: Date, monthlyRate: number): number {
-  const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-  return Math.ceil(days / 30) * monthlyRate;
-}
+
 
 // GET /api/shelves/my-rentals
 router.get('/my-rentals', requireRole('business_owner'), async (req: Request, res: Response) => {
@@ -33,13 +30,10 @@ router.get('/my-earnings', requireRole('agent'), async (req: Request, res: Respo
     const agent = await Agent.findOne({ userId: req.user!.sub });
     if (!agent) { res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Agent profile not found' } }); return; }
     const { ShelfRental } = await import('../models/ShelfRental');
-    const { Payment } = await import('../models/Payment');
     const rentals = await ShelfRental.find({ agentId: agent._id }).sort({ createdAt: -1 });
     const totalEarned = rentals.reduce((sum, r) => sum + (r.pricing?.totalAmount || 0), 0);
     const activeRentals = rentals.filter(r => r.status === 'active').length;
-    const payments = await Payment.find({ payeeId: agent.userId, paymentType: 'shelf_rental', status: 'completed' });
-    const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
-    res.json({ success: true, data: { totalEarned, totalPaid, activeRentals, rentals } });
+    res.json({ success: true, data: { totalEarned, activeRentals, rentals } });
   } catch (err: any) {
     res.status(500).json({ success: false, error: { code: 'ERROR', message: err.message } });
   }
@@ -78,7 +72,7 @@ router.patch('/:id', requireRole('business_owner'), async (req: Request, res: Re
     if (shelfNumber) rental.shelfNumber = shelfNumber;
     if (monthlyRate) rental.pricing.monthlyRate = Number(monthlyRate);
     if (endDate) rental.rentalPeriod.endDate = new Date(endDate);
-    rental.pricing.totalAmount = calcTotal(rental.rentalPeriod.startDate, rental.rentalPeriod.endDate, rental.pricing.monthlyRate);
+    rental.pricing.totalAmount = calculateTotalAmount(rental.rentalPeriod.startDate, rental.rentalPeriod.endDate, rental.pricing.monthlyRate);
     await rental.save();
     res.json({ success: true, data: rental });
   } catch (err: any) {
@@ -137,7 +131,7 @@ router.post('/:id/renew', requireRole('business_owner'), async (req: Request, re
     if (newEnd <= base) { res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'New end date must be after current end date' } }); return; }
     rental.rentalPeriod.endDate = newEnd;
     rental.status = 'active';
-    rental.pricing.totalAmount = calcTotal(rental.rentalPeriod.startDate, rental.rentalPeriod.endDate, rental.pricing.monthlyRate);
+    rental.pricing.totalAmount = calculateTotalAmount(rental.rentalPeriod.startDate, rental.rentalPeriod.endDate, rental.pricing.monthlyRate);
     await rental.save();
     res.json({ success: true, data: rental });
   } catch (err: any) {
